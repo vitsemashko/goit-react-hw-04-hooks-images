@@ -16,10 +16,33 @@ export const App = () => {
   const [modalImg, setModalImg] = useState('');
   const [modalAlt, setModalAlt] = useState('');
   const [error, setError] = useState(null);
+  useEffect(() => {
+    if (!currentSearch) {
+      return;
+    }
+    setIsLoading(true);
+    fetchImages(currentSearch, pageNr)
+      .then(data => {
+        setImages(prev => {
+          return [...prev, ...data];
+        });
+      })
+      .catch(error => {
+        setError(error.message);
+      })
+      .finally(() => setIsLoading(false));
+  }, [currentSearch, pageNr]);
 
+  useEffect(() => {
+    const handleKeyDown = event => {
+      if (event.code === 'Escape') {
+        setModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+  }, [modalOpen]);
   const handleSubmit = e => {
     e.preventDefault();
-    setIsLoading(true);
     const { inputForSearch } = e.target.elements;
     if (inputForSearch.value.trim() === '') {
       return;
@@ -50,27 +73,6 @@ export const App = () => {
     setModalImg('');
     setModalAlt('');
   };
-  useEffect(() => {
-    setIsLoading(true);
-    fetchImages(currentSearch, pageNr)
-      .then(data => {
-        setImages([...images, ...data]);
-      })
-      .catch(error => {
-        setError(error.message);
-      })
-      .finally(() => setIsLoading(false));
-  }, [pageNr, currentSearch]);
-
-  useEffect(() => {
-    const handleKeyDown = event => {
-      if (event.code === 'Escape') {
-        setModalOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-  }, [modalOpen]);
-
   return (
     <div
       style={{
