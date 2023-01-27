@@ -15,26 +15,24 @@ export const App = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalImg, setModalImg] = useState('');
   const [modalAlt, setModalAlt] = useState('');
+  const [error, setError] = useState(null);
 
-  const handleSubmit = async e => {
+  const handleSubmit = e => {
     e.preventDefault();
-    setIsLoading({ isLoading: true });
-    const inputForSearch = e.target.elements.inputForSearch;
+    setIsLoading(true);
+    const { inputForSearch } = e.target.elements;
     if (inputForSearch.value.trim() === '') {
       return;
     }
-    const response = await fetchImages(inputForSearch.value, 1);
-    setImages(response);
-    setIsLoading(false);
-    setCurrentSearch(inputForSearch.value);
-    setPageNr(2);
+    if (currentSearch !== inputForSearch.value) {
+      setImages([]);
+      setIsLoading(false);
+      setCurrentSearch(inputForSearch.value);
+      setPageNr(1);
+    }
   };
 
-  const handleClickMore = async () => {
-    setIsLoading({ isLoading: true });
-    const response = await fetchImages(currentSearch, pageNr);
-    setImages([...images, ...response]);
-    setIsLoading(false);
+  const handleClickMore = () => {
     setPageNr(pageNr + 1);
   };
 
@@ -44,20 +42,34 @@ export const App = () => {
     setModalImg(e.target.name);
   };
 
-  const handleModalClose = () => {
+  const handleModalClose = e => {
+    if (e.target.tagName === 'IMG') {
+      return;
+    }
     setModalOpen(false);
     setModalImg('');
     setModalAlt('');
   };
+  useEffect(() => {
+    setIsLoading(true);
+    fetchImages(currentSearch, pageNr)
+      .then(data => {
+        setImages([...images, ...data]);
+      })
+      .catch(error => {
+        setError(error.message);
+      })
+      .finally(() => setIsLoading(false));
+  }, [pageNr, currentSearch]);
 
   useEffect(() => {
     const handleKeyDown = event => {
       if (event.code === 'Escape') {
-        handleModalClose();
+        setModalOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [modalOpen]);
 
   return (
     <div
@@ -68,17 +80,13 @@ export const App = () => {
         paddingBottom: '24px',
       }}
     >
-      {isLoading && (pageNr === 1) ? (
-        <Loader />
-      ) : (
-        <React.Fragment>
-          <Searchbar onSubmit={handleSubmit} />
-          <ImageGallery onImageClick={handleImageClick} images={images} />
-      
-          {isLoading && (pageNr >= 2) ? <Loader /> : null}
-          {images.length > 0 ? <Button onClick={handleClickMore} /> : null}
-        </React.Fragment>
-      )}
+      <>
+        <Searchbar onSubmit={handleSubmit} />
+        {isLoading && <Loader />}
+        <ImageGallery onImageClick={handleImageClick} images={images} />
+        {error && <p>An error occurred. Please try again</p>}
+        {images.length > 0 ? <Button onClick={handleClickMore} /> : null}
+      </>
       {modalOpen ? (
         <Modal src={modalImg} alt={modalAlt} handleClose={handleModalClose} />
       ) : null}
